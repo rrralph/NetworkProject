@@ -42,11 +42,13 @@ int main(int argc, char *argv[]){
         }
         break;
     }
+    freeaddrinfo(servinfo);
 
     if(p == NULL){
         fprintf(stderr, "Error binding a socket");
         return EXIT_FAILURE;
     }
+
     if(send(sockfd, "hello, world$", 13,0) <=0){
         perror("error sending");
     }
