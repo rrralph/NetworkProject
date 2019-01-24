@@ -48,7 +48,7 @@ for i in xrange(numTrials):
     randomLen = []
     socketSubset = random.sample(socketList, numConnections)
     for j in xrange(numWritesReads):
-        random_index = random.randrange(len(GOOD_REQUESTS) + len(BAD_REQUESTS))
+        random_index = random.randrange( len(GOOD_REQUESTS) + len(BAD_REQUESTS) )
         if random_index < len(GOOD_REQUESTS):
             random_string = GOOD_REQUESTS[random_index]
             randomLen.append(len(random_string))
@@ -63,16 +63,18 @@ for i in xrange(numTrials):
         data = socketSubset[j].recv(randomLen[j])
         start_time = time.time()
         while True:
+            print str(len(data)) + " " + str(randomLen[j])
             if len(data) == randomLen[j]:
                 break
             socketSubset[j].settimeout(RECV_EACH_TIMEOUT)
             data += socketSubset[j].recv(randomLen[j])
             if time.time() - start_time > RECV_TOTAL_TIMEOUT:
                 break
+        print "expected: \n" + randomData[j]
+        print
+        print "recved: \n" + data + "\n"
         if data != randomData[j]:
             sys.stderr.write("Error: Data received is not the same as sent! \n")
-            print "recved: " + data
-            print "sent: " + randomData[j]
             sys.exit(1)
 
 for i in xrange(numConnections):

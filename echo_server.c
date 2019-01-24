@@ -6,15 +6,35 @@
 #include<sys/types.h>
 #include<netdb.h>
 #include<arpa/inet.h>
+#include<parse.h>
 
 #define PORT "9998"
 #define BACKLOG 5
+#define RECV_BUF_LEN 8192
+#define RESP400 "HTTP/1.1 400 Bad Request\r\n\r\n"
 
 void *get_in_addr(struct sockaddr *sa){
     if(sa->sa_family == AF_INET){
         return &(((struct sockaddr_in*)sa)->sin_addr);
     }
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+    
+
+int recv_http_header(int sockfd, char *buf, int size){
+    int rv = 0;
+    int offset = 0;
+    do{
+        rv = recv(sockfd, buf + offset, size - offset, 0);
+        if(rv != -1)
+            offset += rv;
+        if(rv <= 0 ||  offset >= 4 && strncmp(buf+offset - 4, "\r\n\r\n", 4) == 0)
+            break;
+    }while(rv > 0);
+    
+    fprintf(stdout, "recv_http_header() gets: %d bytes\n ", offset);
+    return rv == -1 ? -1 : offset;
 }
 
 int main(){
@@ -75,7 +95,7 @@ int main(){
     int fdmax = listener;
     fd_set master, readfds;
     char addrbuf[32];
-    char recvbuf[128];
+    char recvbuf[8192];
 
     FD_SET(listener, &master);
 
@@ -103,22 +123,38 @@ int main(){
                         if(newfd > fdmax)
                             fdmax = newfd;
                         fprintf(stdout,"New connection from client: %s\n", inet_ntop(theiraddr.ss_family, get_in_addr((struct sockaddr*) &theiraddr), addrbuf, sin_size));
+                        /*
                         if( send(newfd, "Hello, world!", 13,0) == -1){
                             perror("Error sending");
                             continue;
                         }
+                        */
                     }else{
-                        if( (rv = recv(i, recvbuf, 127, 0)) <= 0){
+                        memset(recvbuf, 0, sizeof(recvbuf));
+                        if( (rv = recv_http_header(i, recvbuf, RECV_BUF_LEN - 1)) <= 0){
                             if( rv == 0){
-                                fprintf(stdout, "socket %d hang up", i);
+                                fprintf(stdout, "socket %d hang up\n", i);
                             }else{
                                 perror("Error recving");
                             }
                             close(i);
                             FD_CLR(i, &master);
                         }else{
-                            recvbuf[rv] = '\0';
-                            fprintf(stdout, "Msg from socket %d: %s",i,recvbuf);
+                            Request *request = NULL;
+                            request = parse(recvbuf, rv , i);
+                            if(request != NULL){
+                                printf("sending the same back\n");
+                                if(send(i, recvbuf, rv,0) == -1){
+                                    perror("Error sending");
+                                }
+                           }else{
+                                printf("sending 400 back\n");
+                                //if(send(i, recvbuf, rv,0) == -1){
+                                if( (rv = send(i, "HTTP/1.1 400 Bad Request\r\n",26 ,0)) == -1){
+                                    perror("Error sending");
+                                }
+                                printf("send %d btyes back\n",rv);
+                            }
                         }
                     }
                 }
