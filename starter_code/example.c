@@ -30,5 +30,21 @@ int main(int argc, char **argv){
   }
   free(request->headers);
   free(request);
+
+  int fd2 = open(argv[2], O_RDONLY);
+  char buf2[8192];
+  int rv = read(fd2, buf2, 8192);
+  request = parse(buf2, rv, fd2);
+  if(request == NULL)
+      printf("Second Failed\n");
+  else
+      printf("Second file Succeed\n");
+
+  request = parse(buf,readRet,fd_in);
+  if(request == NULL)
+      printf("Third Failed\n");
+  else
+      printf("Third file Succeed\n");
+
   return 0;
 }

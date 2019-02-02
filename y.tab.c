@@ -76,6 +76,9 @@
 #define YPRINTF(...)
 #endif
 
+//for debug
+//int yydebug = 1;
+
 /* yyparse() calls yyerror() on error */
 void yyerror (char *s);
 
@@ -103,7 +106,7 @@ size_t parsing_buf_siz;
 Request *parsing_request;
 
 
-#line 107 "y.tab.c" /* yacc.c:339  */
+#line 110 "y.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -169,12 +172,12 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 50 "parser.y" /* yacc.c:355  */
+#line 53 "parser.y" /* yacc.c:355  */
 
 	char str[8192];
 	int i;
 
-#line 178 "y.tab.c" /* yacc.c:355  */
+#line 181 "y.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -191,7 +194,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 195 "y.tab.c" /* yacc.c:358  */
+#line 198 "y.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -489,9 +492,9 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   111,   111,   112,   115,   121,   125,   151,   152,   155,
-     158,   166,   170,   178,   182,   186,   191,   198,   209,   210,
-     219
+       0,   114,   114,   115,   118,   124,   128,   154,   155,   158,
+     161,   169,   173,   181,   185,   189,   194,   201,   212,   213,
+     222
 };
 #endif
 
@@ -1282,113 +1285,113 @@ yyreduce:
   switch (yyn)
     {
         case 3:
-#line 112 "parser.y" /* yacc.c:1646  */
+#line 115 "parser.y" /* yacc.c:1646  */
     {
 	(yyval.i) = '0' + (yyvsp[0].i);
 }
-#line 1290 "y.tab.c" /* yacc.c:1646  */
+#line 1293 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 5:
-#line 121 "parser.y" /* yacc.c:1646  */
+#line 124 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("token: Matched rule 1.\n");
 	snprintf((yyval.str), 8192, "%c", (yyvsp[0].i));
 }
-#line 1299 "y.tab.c" /* yacc.c:1646  */
+#line 1302 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 125 "parser.y" /* yacc.c:1646  */
+#line 128 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("token: Matched rule 2.\n");
   snprintf((yyval.str), 8192, "%s%c", (yyvsp[-1].str), (yyvsp[0].i));
 }
-#line 1308 "y.tab.c" /* yacc.c:1646  */
+#line 1311 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 152 "parser.y" /* yacc.c:1646  */
-    {
-	(yyval.i) = (yyvsp[0].i);
-}
-#line 1316 "y.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 9:
 #line 155 "parser.y" /* yacc.c:1646  */
     {
 	(yyval.i) = (yyvsp[0].i);
 }
-#line 1324 "y.tab.c" /* yacc.c:1646  */
+#line 1319 "y.tab.c" /* yacc.c:1646  */
     break;
 
-  case 10:
+  case 9:
 #line 158 "parser.y" /* yacc.c:1646  */
     {
 	(yyval.i) = (yyvsp[0].i);
 }
-#line 1332 "y.tab.c" /* yacc.c:1646  */
+#line 1327 "y.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 10:
+#line 161 "parser.y" /* yacc.c:1646  */
+    {
+	(yyval.i) = (yyvsp[0].i);
+}
+#line 1335 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 166 "parser.y" /* yacc.c:1646  */
+#line 169 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("text: Matched rule 1.\n");
 	snprintf((yyval.str), 8192, "%c", (yyvsp[0].i));
 }
-#line 1341 "y.tab.c" /* yacc.c:1646  */
+#line 1344 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 170 "parser.y" /* yacc.c:1646  */
+#line 173 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("text: Matched rule 2.\n");
 	snprintf((yyval.str), 8192, "%s%s%c", (yyvsp[-2].str), (yyvsp[-1].str), (yyvsp[0].i));
 }
-#line 1350 "y.tab.c" /* yacc.c:1646  */
+#line 1353 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 178 "parser.y" /* yacc.c:1646  */
+#line 181 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("OWS: Matched rule 1\n");
 	(yyval.str)[0]=0;
 }
-#line 1359 "y.tab.c" /* yacc.c:1646  */
+#line 1362 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 182 "parser.y" /* yacc.c:1646  */
+#line 185 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("OWS: Matched rule 2\n");
 	snprintf((yyval.str), 8192, "%c", (yyvsp[0].i));
 }
-#line 1368 "y.tab.c" /* yacc.c:1646  */
+#line 1371 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 186 "parser.y" /* yacc.c:1646  */
+#line 189 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("OWS: Matched rule 3\n");
 	snprintf((yyval.str), 8192, "%s", (yyvsp[0].str));
 }
-#line 1377 "y.tab.c" /* yacc.c:1646  */
+#line 1380 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 191 "parser.y" /* yacc.c:1646  */
+#line 194 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("request_Line:\n%s\n%s\n%s\n",(yyvsp[-5].str), (yyvsp[-3].str),(yyvsp[-1].str));
     strcpy(parsing_request->http_method, (yyvsp[-5].str));
 	strcpy(parsing_request->http_uri, (yyvsp[-3].str));
 	strcpy(parsing_request->http_version, (yyvsp[-1].str));
 }
-#line 1388 "y.tab.c" /* yacc.c:1646  */
+#line 1391 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 198 "parser.y" /* yacc.c:1646  */
+#line 201 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("request_Header:\n%s\n%s\n",(yyvsp[-6].str),(yyvsp[-2].str));
     strcpy(parsing_request->headers[parsing_request->header_count].header_name, (yyvsp[-6].str));
@@ -1399,32 +1402,32 @@ yyreduce:
         parsing_request->headers = ( Request_header *)realloc(parsing_request->headers, sizeof( Request_header) * parsing_request->header_capacity);
     }
 }
-#line 1403 "y.tab.c" /* yacc.c:1646  */
+#line 1406 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 209 "parser.y" /* yacc.c:1646  */
+#line 212 "parser.y" /* yacc.c:1646  */
     {}
-#line 1409 "y.tab.c" /* yacc.c:1646  */
+#line 1412 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 210 "parser.y" /* yacc.c:1646  */
+#line 213 "parser.y" /* yacc.c:1646  */
     {}
-#line 1415 "y.tab.c" /* yacc.c:1646  */
+#line 1418 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 219 "parser.y" /* yacc.c:1646  */
+#line 222 "parser.y" /* yacc.c:1646  */
     {
 	YPRINTF("parsing_request: Matched Success.\n");
 	return SUCCESS;
 }
-#line 1424 "y.tab.c" /* yacc.c:1646  */
+#line 1427 "y.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1428 "y.tab.c" /* yacc.c:1646  */
+#line 1431 "y.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1652,7 +1655,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 224 "parser.y" /* yacc.c:1906  */
+#line 227 "parser.y" /* yacc.c:1906  */
 
 
 /* C code */

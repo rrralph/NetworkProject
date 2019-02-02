@@ -5,6 +5,7 @@
 */
 Request * parse(char *buffer, int size, int socketFd) {
   //Differant states in the state machine
+    printf("in parse(): \n%s", buffer);
 	enum {
 		STATE_START = 0, STATE_CR, STATE_CRLF, STATE_CRLFCR, STATE_CRLFCRLF
 	};
@@ -58,16 +59,18 @@ Request * parse(char *buffer, int size, int socketFd) {
 		set_parsing_options(buf, i, request);
 
         printf("parsing %d bytes\n", i);
+        yyrestart();
 		if (yyparse() == SUCCESS) {
             printf("Parsing Succeeded\n");
             return request;
 		}else{
-            printf("%s\n",request->headers);
+            printf("Parsing Failed\n");
             free(request->headers);
             free(request);
+            return NULL;
         }
 	}
   //TODO Handle Malformed Requests
-  printf("Parsing Failed\n");
+  printf("Final state is not crlfcrlf\n");
   return NULL;
 }

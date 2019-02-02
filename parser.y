@@ -17,6 +17,9 @@
 #define YPRINTF(...)
 #endif
 
+//for debug
+//int yydebug = 1;
+
 /* yyparse() calls yyerror() on error */
 void yyerror (char *s);
 
