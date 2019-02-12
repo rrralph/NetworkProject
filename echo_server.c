@@ -5,6 +5,7 @@
 #include<sys/socket.h>
 #include<sys/types.h>
 #include<netdb.h>
+#include<time.h>
 #include<arpa/inet.h>
 #include<parse.h>
 
@@ -14,6 +15,17 @@
 #define BACKLOG 5
 #define BUF_LEN 8192
 #define RESP400 "HTTP/1.1 400 Bad Request\r\n\r\n"
+
+
+int get_current_time(char *buf){
+    time_t t = time(NULL);
+    struct tm *tm = gmtime(&t);
+    int rv = strftime(buf, 80, "%a, %d %b %Y %X GMT", tm);
+    if(rv == 0){
+        perror("error in strftime in get_current_time");
+    }
+    return rv == 0 ? -1 : rv;
+}
 
 void *get_in_addr(struct sockaddr *sa){
     if(sa->sa_family == AF_INET){
@@ -247,10 +259,11 @@ int main(){
                                 char buf[BUF_LEN];
                                 int rv = pack_error_msg(buf, 400, "Bad Request");
                                 if( (rv = send_all(i, buf, rv)) == -1){
-//                                if( (rv = send(i, "HTTP/1.1 400 Bad Request\r\n",26 ,0)) == -1){
                                     perror("Error sending");
                                 }
                                 printf("send %d btyes back\n",rv);
+                                close(i);
+                                FD_CLR(i, &master);
                             }
                         }
                     }
