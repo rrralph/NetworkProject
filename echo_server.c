@@ -8,9 +8,11 @@
 #include<arpa/inet.h>
 #include<parse.h>
 
+#include"log/logging.h"
+
 #define PORT "9998"
 #define BACKLOG 5
-#define RECV_BUF_LEN 8192
+#define BUF_LEN 8192
 #define RESP400 "HTTP/1.1 400 Bad Request\r\n\r\n"
 
 void *get_in_addr(struct sockaddr *sa){
@@ -20,7 +22,6 @@ void *get_in_addr(struct sockaddr *sa){
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-    
 
 int recv_http_header(int sockfd, char *buf, int size){
     int rv = 0;
@@ -29,12 +30,106 @@ int recv_http_header(int sockfd, char *buf, int size){
         rv = recv(sockfd, buf + offset, size - offset, 0);
         if(rv != -1)
             offset += rv;
-        if(rv <= 0 ||  offset >= 4 && strncmp(buf+offset - 4, "\r\n\r\n", 4) == 0)
+        if(rv <= 0 ||  (offset >= 4 && strncmp(buf+offset - 4, "\r\n\r\n", 4) == 0))
             break;
     }while(rv > 0);
     
     fprintf(stdout, "recv_http_header() gets: %d bytes\n ", offset);
     return rv == -1 ? -1 : offset;
+}
+
+int pack_crlf(char *buf){
+    int rv = sprintf(buf, "\r\n");
+    if(rv == -1){
+        perror("error sprintf in pack_crlf");
+    }
+    return rv;
+}
+
+
+int pack_code_msg(char *buf, int code,const char *msg){
+    int rv = sprintf(buf, "HTTP/1.1 %d %s\r\n", code, msg);
+    if(rv == -1){
+        perror("error sprintf in pack_code_msg");
+    }
+    return rv;
+}
+int pack_server_info(char *buf){
+    int rv = sprintf(buf , "Server: Liso/1.0\r\n");
+    if(rv == -1){
+        perror("error sprintf in pack_server_info");
+    }
+    return rv;
+}
+int pack_time(char *buf){
+    int rv = sprintf(buf, "Date: ");
+    if(rv == -1){
+        perror("error sprintf in pack_time");
+        return rv;
+    }
+    int rv2 = get_current_time(buf + rv);
+    if(rv2 == -1){
+        perror("error sprintf in pack_time");
+        return rv2;
+    }
+    int rv3 = pack_crlf(buf + rv + rv2);
+
+    return rv3 == -1 ? rv3 : rv + rv2 + rv3;
+}
+
+int pack_connection(char *buf, int close){
+    int rv;
+    if(close){
+        rv = sprintf(buf, "Connection: close\r\n");
+    }else
+        rv = sprintf(buf, "Connection: open\r\n");
+    return rv;
+}
+
+int pack_cnt_type(char *buf, const char *msg){
+    int rv = sprintf(buf, "Content-Type: %s\r\n", msg);
+    if(rv == -1){
+        perror("error sprintf in pack_cnt_type");
+    }
+    return rv;
+}
+
+int pack_error_msg(char *buf, int errorCode, const char* errorMsg){
+    int totalRv = 0;
+    int rv = pack_code_msg(buf, errorCode, errorMsg);
+    if(rv == -1) return rv;
+    else totalRv += rv;
+
+    rv = pack_server_info(buf + totalRv);
+    if(rv == -1) return rv;
+    else totalRv += rv;
+
+    rv = pack_time(buf + totalRv);
+    if(rv == -1) return rv;
+    else totalRv += rv;
+
+    rv = pack_connection(buf+totalRv, 1);
+    if(rv == -1) return rv;
+    else totalRv += rv;
+
+    rv = pack_cnt_type(buf + totalRv, "text/html");
+    if(rv == -1) return rv;
+    else totalRv += rv;
+
+    return totalRv;
+}
+
+int send_all(int sockfd, char *buf, int size){
+    int rv = 0;
+    int offset = 0;
+    do{
+        rv = send(sockfd, buf + offset, size - offset, 0);
+        if(rv == -1)
+            break;
+        offset += rv;
+    }while(offset < size);
+
+    return rv == -1 ? rv : offset;
 }
 
 int main(){
@@ -131,7 +226,7 @@ int main(){
                         */
                     }else{
                         memset(recvbuf, 0, sizeof(recvbuf));
-                        if( (rv = recv_http_header(i, recvbuf, RECV_BUF_LEN - 1)) <= 0){
+                        if( (rv = recv_http_header(i, recvbuf, BUF_LEN - 1)) <= 0){
                             if( rv == 0){
                                 fprintf(stdout, "socket %d hang up\n", i);
                             }else{
@@ -149,8 +244,10 @@ int main(){
                                 }
                            }else{
                                 printf("sending 400 back\n");
-                                //if(send(i, recvbuf, rv,0) == -1){
-                                if( (rv = send(i, "HTTP/1.1 400 Bad Request\r\n",26 ,0)) == -1){
+                                char buf[BUF_LEN];
+                                int rv = pack_error_msg(buf, 400, "Bad Request");
+                                if( (rv = send_all(i, buf, rv)) == -1){
+//                                if( (rv = send(i, "HTTP/1.1 400 Bad Request\r\n",26 ,0)) == -1){
                                     perror("Error sending");
                                 }
                                 printf("send %d btyes back\n",rv);

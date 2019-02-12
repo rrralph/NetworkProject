@@ -74,3 +74,13 @@ Request * parse(char *buffer, int size, int socketFd) {
   printf("Final state is not crlfcrlf\n");
   return NULL;
 }
+
+
+int hanlde_head(){
+
+}
+
+int handle_get(){
+
+}
+

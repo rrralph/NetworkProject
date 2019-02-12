@@ -2,13 +2,17 @@
 #include<stdio.h>
 #include<time.h>
 
-enum log_mode {LOG_INFO, LOG_WARNING, LOG_ERROR};
+#include "logging.h"
+
 
 int get_current_time(char *buf){
     time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
-    int rv = sprintf(buf ,"%d-%d-%d %d:%d:%d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-    return rv;
+    struct tm *tm = gmtime(&t);
+    int rv = strftime(buf, 80, "%a, %d %b %Y %X GMT", tm);
+    if(rv == 0){
+        perror("error in strftime in get_current_time");
+    }
+    return rv == 0 ? -1 : rv;
 }
 
 int logging(enum log_mode mode, FILE* fp, const char *format, ... ){
@@ -47,6 +51,7 @@ int close_log_file(FILE *fp){
     return rv;
 }
 
+/*
 int main(){
     FILE* fp = fopen("log.txt","w");
     logging(LOG_INFO,fp, "this is %s %d\n", "test", 1);
@@ -55,3 +60,4 @@ int main(){
 
     return 0;
 }
+*/
