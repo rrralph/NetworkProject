@@ -1,11 +1,13 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<stdarg.h>
 #include<unistd.h>
 #include<sys/socket.h>
 #include<sys/types.h>
 #include<netdb.h>
 #include<time.h>
+#include<string.h>
 #include<arpa/inet.h>
 #include<parse.h>
 
@@ -17,14 +19,16 @@
 #define RESP400 "HTTP/1.1 400 Bad Request\r\n\r\n"
 
 
-int get_current_time(char *buf){
+char* get_current_time(){
+    char *buf = malloc(80);
+    memset(buf, 0, 80);
     time_t t = time(NULL);
     struct tm *tm = gmtime(&t);
     int rv = strftime(buf, 80, "%a, %d %b %Y %X GMT", tm);
     if(rv == 0){
         perror("error in strftime in get_current_time");
     }
-    return rv == 0 ? -1 : rv;
+    return buf;
 }
 
 void *get_in_addr(struct sockaddr *sa){
@@ -58,52 +62,37 @@ int pack_crlf(char *buf){
     return rv;
 }
 
+int set_header(char *buf, const char *format, ...){
+    va_list args;
+    va_start(args, format);
+    int rv = vsprintf(buf, format, args);
+    va_end(args);
+    if(rv == -1){
+        perror("error in set_header");
+    }
+    return rv;
+}
+
 
 int pack_code_msg(char *buf, int code,const char *msg){
-    int rv = sprintf(buf, "HTTP/1.1 %d %s\r\n", code, msg);
-    if(rv == -1){
-        perror("error sprintf in pack_code_msg");
-    }
-    return rv;
+    return set_header(buf,"HTTP/1.1 %d %s\r\n", code, msg);
 }
 int pack_server_info(char *buf){
-    int rv = sprintf(buf , "Server: Liso/1.0\r\n");
-    if(rv == -1){
-        perror("error sprintf in pack_server_info");
-    }
-    return rv;
+    return set_header(buf, "Server: Liso/1.0\r\n");
 }
 int pack_time(char *buf){
-    int rv = sprintf(buf, "Date: ");
-    if(rv == -1){
-        perror("error sprintf in pack_time");
-        return rv;
-    }
-    int rv2 = get_current_time(buf + rv);
-    if(rv2 == -1){
-        perror("error sprintf in pack_time");
-        return rv2;
-    }
-    int rv3 = pack_crlf(buf + rv + rv2);
-
-    return rv3 == -1 ? rv3 : rv + rv2 + rv3;
+    return set_header(buf, "Date: %s\r\n", get_current_time());
 }
 
 int pack_connection(char *buf, int close){
-    int rv;
     if(close){
-        rv = sprintf(buf, "Connection: close\r\n");
+        return set_header(buf, "Connection: close\r\n");
     }else
-        rv = sprintf(buf, "Connection: open\r\n");
-    return rv;
+        return set_header(buf, "Connection: open\r\n");
 }
 
 int pack_cnt_type(char *buf, const char *msg){
-    int rv = sprintf(buf, "Content-Type: %s\r\n", msg);
-    if(rv == -1){
-        perror("error sprintf in pack_cnt_type");
-    }
-    return rv;
+    return set_header(buf, "Content-Type: %s\r\n", msg);
 }
 
 int pack_error_msg(char *buf, int errorCode, const char* errorMsg){
@@ -262,8 +251,10 @@ int main(){
                                     perror("Error sending");
                                 }
                                 printf("send %d btyes back\n",rv);
+                                /*
                                 close(i);
                                 FD_CLR(i, &master);
+                                */
                             }
                         }
                     }

@@ -209,7 +209,7 @@ request_header: token ows t_colon ows text ows t_crlf {
     }
 };
 
-request_header_list: request_header {};
+request_header_list:  {};
         | request_header request_header_list {};
 
 
