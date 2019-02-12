@@ -12,11 +12,11 @@
 #include<parse.h>
 
 #include"log/logging.h"
+#include"echo_server.h"
 
 #define PORT "9998"
 #define BACKLOG 5
 #define BUF_LEN 8192
-#define RESP400 "HTTP/1.1 400 Bad Request\r\n\r\n"
 
 
 char* get_current_time(){
@@ -135,6 +135,7 @@ int send_all(int sockfd, char *buf, int size){
 
 int main(){
 
+
     struct addrinfo hints, *servinfo, *p;
 
     int rv;
@@ -238,12 +239,16 @@ int main(){
                         }else{
                             Request *request = NULL;
                             request = parse(recvbuf, rv , i);
+                            checkAndResp(request,recvbuf, i);
+
+
+                            /*
                             if(request != NULL){
                                 printf("sending the same back\n");
                                 if(send(i, recvbuf, rv,0) == -1){
                                     perror("Error sending");
                                 }
-                           }else{
+                            }else{
                                 printf("sending 400 back\n");
                                 char buf[BUF_LEN];
                                 int rv = pack_error_msg(buf, 400, "Bad Request");
@@ -251,11 +256,8 @@ int main(){
                                     perror("Error sending");
                                 }
                                 printf("send %d btyes back\n",rv);
-                                /*
-                                close(i);
-                                FD_CLR(i, &master);
-                                */
                             }
+                            */
                         }
                     }
                 }

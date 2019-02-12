@@ -1,9 +1,15 @@
+#ifndef PARSE_H_
+#define PARSE_H_
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #define SUCCESS 0
 
+#ifndef BUF_LEN
+#define BUF_LEN 8192
+#endif
 
 //Header field
 typedef struct
@@ -24,3 +30,8 @@ typedef struct
 } Request;
 
 Request* parse(char *buffer, int size,int socketFd);
+
+int checkAndResp(Request* ,const char *, int );
+
+#endif
+

@@ -6,6 +6,7 @@
 
 #include "logging.h"
 
+#define DEBUG 1
 
 char* get_log_time(){
     time_t t = time(NULL);
@@ -30,6 +31,11 @@ int logging( FILE* fp, const char *format, ... ){
     va_end(args);
 
     int rv = fprintf(fp, "%s", buffer);
+
+#ifdef DEBUG
+    printf("%s", buffer);
+#endif
+
     return rv;
 }
 

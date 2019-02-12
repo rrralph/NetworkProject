@@ -546,7 +546,7 @@ static const yytype_int8 yypact[] =
      means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       0,     3,     4,     2,     5,     0,     0,     0,     0,     6,
+       0,     3,     4,     2,     5,     0,    18,     0,     0,     6,
       13,    18,     0,     1,    10,     9,     8,     7,    11,    13,
       14,    15,     0,    19,    20,     0,     0,    13,    13,    12,
        0,    16,    13,     0,    17
@@ -607,7 +607,7 @@ static const yytype_uint8 yyr1[] =
 static const yytype_uint8 yyr2[] =
 {
        0,     2,     1,     1,     1,     1,     2,     1,     1,     1,
-       1,     1,     3,     0,     1,     1,     6,     7,     1,     2,
+       1,     1,     3,     0,     1,     1,     6,     7,     0,     2,
        3
 };
 
