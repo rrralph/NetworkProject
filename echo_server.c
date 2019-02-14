@@ -240,8 +240,6 @@ int main(){
                             Request *request = NULL;
                             request = parse(recvbuf, rv , i);
                             checkAndResp(request,recvbuf, i);
-
-
                             /*
                             if(request != NULL){
                                 printf("sending the same back\n");

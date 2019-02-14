@@ -13,20 +13,20 @@
 extern FILE* logFp;
 
 char *errMsgTmp = "\
-<head>\
-<title>Error response</title>\
-</head>\
-<body>\
-<h1>Error response</h1>\
-<p>Error code %d.\
-<p>Message: %s(%s).\
-<p>Error code explanation: %d = %s.\
-</body>";
+<head>\n\
+<title>Error response</title>\n\
+</head>\n\
+<body>\n\
+<h1>Error response</h1>\n\
+<p>Error code %d.\n\
+<p>Message: %s(%s).\n\
+<p>Error code explanation: %d = %s.\n\
+</body>\n";
 
 char *prePath = "tmp/www/";
-char msgBuf[BUF_LEN];
+char msgBuf[BUF_LEN * 10];
 
-int getFileStat(const char *, struct stat**);
+char* getFileStat(const char *, struct stat**);
 
 /**
 * Given a char buffer returns the parsed request headers
@@ -103,6 +103,20 @@ Request * parse(char *buffer, int size, int socketFd) {
   return NULL;
 }
 
+char *get_filetype(const char *path){
+    char* ptr = strrchr(path ,'.');
+    if(strcmp(ptr, ".html") == 0)
+        return "text/html";
+    else if (strcmp(ptr, ".css") == 0)
+        return "text/css";
+    else if(strcmp(ptr, ".png") == 0)
+        return "image/png";
+    else if(strcmp(ptr, ".jpg") == 0)
+        return "image/jpeg";
+    else if(strcmp(ptr, ".gif") == 0)
+        return "image/gif";
+    return "application/octet-stream";
+}
 
 char *code_explanation(int code){
     switch(code){
@@ -118,60 +132,83 @@ char *code_explanation(int code){
     return NULL;
 }
 
+
 int checkAndResp(Request *request, const char* buf, int sockfd){
     for(int i = 0; i < BUF_LEN; i++) msgBuf[i] = '\0';
     int rv = 0;
     if(request == NULL){
-        rv = sprintf(msgBuf, errMsgTmp, 400, "Bad request syntax",buf, 400, code_explanation(400));
+        rv = pack_error_msg(msgBuf, 400, "Bad request syntax");
+        rv += sprintf(msgBuf + rv, "\r\n");
+        rv += sprintf(msgBuf + rv, errMsgTmp, 400, "Bad request syntax",buf, 400, code_explanation(400));
     }else{
         if(strcmp(request->http_version, "HTTP/1.1")){
-            sprintf(msgBuf, errMsgTmp, 400, "Bad request version",request->http_version, 400, code_explanation(400));
+            rv = pack_error_msg(msgBuf, 400, "Bad request syntax");
+            rv += sprintf(msgBuf + rv, "\r\n");
+            rv += sprintf(msgBuf + rv, errMsgTmp, 400, "Bad request version",request->http_version, 400, code_explanation(400));
         }else if(strcmp(request->http_method, "GET") 
             && strcmp(request->http_method, "POST")
             && strcmp(request->http_method, "HEAD") ){
-            sprintf(msgBuf, errMsgTmp, 501, "Unsupported method", request->http_method, 501, code_explanation(501));
+            rv = pack_error_msg(msgBuf, 501,"Unsupported method");
+            rv += sprintf(msgBuf + rv, "\r\n");
+            rv += sprintf(msgBuf + rv, errMsgTmp, 501, "Unsupported method", request->http_method, 501, code_explanation(501));
         }else {
             struct stat attrib;
             struct stat * attrib_ptr = &attrib; 
-            if(getFileStat(request->http_uri, &attrib_ptr) == -1){
+            char *fullPath;
+            if( (fullPath = getFileStat(request->http_uri, &attrib_ptr)) == NULL){
                 perror(request->http_uri);
-                int rv = set_header(msgBuf, "HTTP/1.1 %d %s\r\n", 404, "Not Found");
-                rv += set_header(msgBuf + rv, "Server: Liso/1.0\r\n");
-                rv += set_header(msgBuf + rv, "Date: %s\r\n",get_current_time());
-                rv += set_header(msgBuf + rv, "Content-Type: text/html\r\n");
-
+                rv = pack_error_msg(msgBuf, 404, "Not found");
+                rv += sprintf(msgBuf + rv, "\r\n");
+                rv += sprintf(msgBuf + rv, errMsgTmp, 404, "Not found",request->http_version, 404, code_explanation(404));
             }else{
-                int rv = set_header(msgBuf, "HTTP/1.1 %d %s\r\n", 200, "OK");
-                rv += set_header(msgBuf + rv, "Server: Liso/1.0\r\n");
-                rv += set_header(msgBuf + rv, "Date: %s\r\n",get_current_time());
-                rv += set_header(msgBuf + rv, "Content-Type: text/html\r\n");
+                rv = set_header(msgBuf, "HTTP/1.1 %d %s\r\n", 200, "OK");
+                rv += set_header(msgBuf + rv, "server: Liso/1.0\r\n");
+                rv += set_header(msgBuf + rv, "date: %s\r\n",get_current_time());
 
-                rv += set_header(msgBuf + rv, "Content-Length: %d\r\n", attrib_ptr->st_size);
-                struct tm *tm = localtime(& ( attrib_ptr->st_mtime) );
-                strftime(msgBuf + rv, 80, "Last-Modified: %a, %d %b %Y %X\r\n", tm );
+                char* ft = get_filetype(fullPath);
+
+                rv += set_header(msgBuf + rv, "content-type: %s\r\n", ft);
+
+                rv += set_header(msgBuf + rv, "content-length: %d\r\n", attrib_ptr->st_size);
+                rv += set_header(msgBuf + rv, "connection: Keep-Alive\r\n");
+
+                struct tm *tm = localtime(& ( attrib_ptr->st_ctime) );
+                rv += strftime(msgBuf + rv, 80, "last-modified: %a, %d %b %Y %X\r\n", tm );
+                rv += sprintf(msgBuf + rv, "\r\n");
+                if(strcmp(request->http_method, "GET")==0){
+                    FILE* fp = fopen(fullPath, "r");
+                    if(fp == NULL)
+                        printf("error open file");
+                    char c;
+                    while( (c = getc(fp)) != EOF){
+                        msgBuf[rv++] = c;
+                    }
+                    free(fullPath);
+                    rv += sprintf(msgBuf+rv, "\r\n");
+                }
             }
         }
     }
     send_all(sockfd, msgBuf, sizeof msgBuf );
-    return 0;
+    printf("sent %d\n", strlen(msgBuf));
+    printf("%s",msgBuf);
+    return rv;
 }
 
-int getFileStat(const char *pathStr, struct stat ** attrib_ptr){
-
-    char fullPath[128];
+char* getFileStat(const char *pathStr, struct stat ** attrib_ptr){
+    char *fullPath = malloc(128);
     memset(fullPath, 0, 128);
     strcpy(fullPath, prePath);
     strcat(fullPath, pathStr);
     if(stat(fullPath, *attrib_ptr) == -1){
         perror("file not found");
-        return -1;
+        return NULL;
     }
     if(S_ISDIR( (*attrib_ptr)->st_mode)){
         strcat(fullPath, "/index.html");
         if(stat(fullPath, *attrib_ptr) == -1){
-            return -1;
+            return NULL;
         }
     }
-
-    return 0;
+    return fullPath;
 }
