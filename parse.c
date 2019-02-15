@@ -12,6 +12,15 @@
 
 extern FILE* logFp;
 
+mime_type_t FILE_TYPES [] = {
+    {".html", "text/html"},
+    {".css", "text/css"},
+    {".png", "image/png"},
+    {".jpg", "image/jpeg"},
+    {".gif", "image/gif"},
+    {NULL, "application/octet-stream"},
+};
+
 char *errMsgTmp = "\
 <head>\n\
 <title>Error response</title>\n\
@@ -105,17 +114,12 @@ Request * parse(char *buffer, int size, int socketFd) {
 
 char *get_filetype(const char *path){
     char* ptr = strrchr(path ,'.');
-    if(strcmp(ptr, ".html") == 0)
-        return "text/html";
-    else if (strcmp(ptr, ".css") == 0)
-        return "text/css";
-    else if(strcmp(ptr, ".png") == 0)
-        return "image/png";
-    else if(strcmp(ptr, ".jpg") == 0)
-        return "image/jpeg";
-    else if(strcmp(ptr, ".gif") == 0)
-        return "image/gif";
-    return "application/octet-stream";
+    int i = 0;
+    for(; FILE_TYPES[i].key != NULL; i++){
+        if(strcmp(ptr, FILE_TYPES[i].key) == 0)
+            break;
+    };
+    return FILE_TYPES[i].value;
 }
 
 char *code_explanation(int code){
@@ -177,12 +181,18 @@ int checkAndResp(Request *request, const char* buf, int sockfd){
                 rv += sprintf(msgBuf + rv, "\r\n");
                 if(strcmp(request->http_method, "GET")==0){
                     FILE* fp = fopen(fullPath, "r");
+                    int nleft = attrib_ptr->st_size;
                     if(fp == NULL)
                         printf("error open file");
-                    char c;
-                    while( (c = getc(fp)) != EOF){
-                        msgBuf[rv++] = c;
+                    while(nleft > 0){
+                        int crv = fread(msgBuf + rv, 1, nleft, fp);
+                        if(crv < 0){
+                            perror("error read file");
+                        }
+                        nleft -= crv;
+                        rv += crv;
                     }
+                    fclose(fp);
                     free(fullPath);
                     rv += sprintf(msgBuf+rv, "\r\n");
                 }
@@ -191,7 +201,7 @@ int checkAndResp(Request *request, const char* buf, int sockfd){
     }
     send_all(sockfd, msgBuf, sizeof msgBuf );
     printf("sent %d\n", strlen(msgBuf));
-    printf("%s",msgBuf);
+    //printf("%s",msgBuf);
     return rv;
 }
 
