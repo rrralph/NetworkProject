@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include<signal.h>
 #include<stdlib.h>
 #include<string.h>
 #include<stdarg.h>
@@ -18,6 +19,9 @@
 #define BACKLOG 5
 #define BUF_LEN 8192
 
+
+int listener;
+extern FILE* log_fptr;
 
 char* get_current_time(){
     char *buf = malloc(80);
@@ -133,13 +137,21 @@ int send_all(int sockfd, char *buf, int size){
     return rv == -1 ? rv : offset;
 }
 
+void tear_down(){
+    close_log();
+    fclose(listener);
+}
+
 int main(){
 
+    signal(SIGINT, tear_down);
+    init_log();
+    logging("%s starts!\n", get_current_time());
+    
 
     struct addrinfo hints, *servinfo, *p;
 
     int rv;
-    int listener;
     int newfd;
     int yes = 1;
 

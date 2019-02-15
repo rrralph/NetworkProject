@@ -2,7 +2,10 @@
 #define LOGGING_H_
 
 char* get_log_time();
-int logging(FILE *, const char*, ...);
+int logging(  const char*, ...);
+int init_log();
+int close_log();
+
 #endif
 
 
