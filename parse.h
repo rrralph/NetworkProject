@@ -31,7 +31,20 @@ typedef struct
 
 Request* parse(char *buffer, int size,int socketFd);
 
-int checkAndResp(Request* ,const char *, int );
+
+typedef struct{
+    const char *key;
+    const char *value;
+} mime_type_t;
+
+typedef struct {
+    int connection;
+    char host[128];
+    char ip[128];
+} http_out_t;
+
+typedef int (*http_handler_t) (const char*, http_out_t *) ;
+int checkAndResp(Request* , http_out_t *, const char *, int );
 
 #endif
 

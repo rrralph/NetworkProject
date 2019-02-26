@@ -4,6 +4,8 @@
 #include<sys/types.h>
 #include<sys/stat.h>
 #include<time.h>
+#include<sys/mman.h>
+#include<fcntl.h>
 
 
 #include "parse.h"
@@ -51,7 +53,6 @@ char *errMsgTmp = "\
 </body>\n";
 
 char *prePath = "tmp/www/";
-char msgBuf[BUF_LEN * 10];
 
 char* getFileStat(const char *, struct stat**);
 
@@ -156,23 +157,28 @@ char *code_explanation(int code){
 
 int checkAndResp(Request *request, http_out_t *out_ptr, const char* buf,  int sockfd  ){
 
-    for(int i = 0; i < BUF_LEN; i++) msgBuf[i] = '\0';
+    char msgBuf[BUF_LEN * 10];
+    for(int i = 0; i < BUF_LEN * 10; i++) msgBuf[i] = '\0';
+
     int rv = 0;
     if(request == NULL){
         rv = pack_error_msg(msgBuf, 400, "Bad request syntax");
         rv += sprintf(msgBuf + rv, "\r\n");
         rv += sprintf(msgBuf + rv, errMsgTmp, 400, "Bad request syntax",buf, 400, code_explanation(400));
+        send_all(sockfd, msgBuf, rv );
     }else{
         if(strcmp(request->http_version, "HTTP/1.1")){
             rv = pack_error_msg(msgBuf, 400, "Bad request syntax");
             rv += sprintf(msgBuf + rv, "\r\n");
             rv += sprintf(msgBuf + rv, errMsgTmp, 400, "Bad request version",request->http_version, 400, code_explanation(400));
+            send_all(sockfd, msgBuf, rv );
         }else if(strcmp(request->http_method, "GET") 
             && strcmp(request->http_method, "POST")
             && strcmp(request->http_method, "HEAD") ){
             rv = pack_error_msg(msgBuf, 501,"Unsupported method");
             rv += sprintf(msgBuf + rv, "\r\n");
             rv += sprintf(msgBuf + rv, errMsgTmp, 501, "Unsupported method", request->http_method, 501, code_explanation(501));
+            send_all(sockfd, msgBuf,  rv );
         }else {
 
             struct stat attrib;
@@ -183,6 +189,7 @@ int checkAndResp(Request *request, http_out_t *out_ptr, const char* buf,  int so
                 rv = pack_error_msg(msgBuf, 404, "Not found");
                 rv += sprintf(msgBuf + rv, "\r\n");
                 rv += sprintf(msgBuf + rv, errMsgTmp, 404, "Not found",request->http_version, 404, code_explanation(404));
+                send_all(sockfd, msgBuf, rv );
             }else{
 
                 setup_http_out(request, out_ptr);
@@ -195,7 +202,9 @@ int checkAndResp(Request *request, http_out_t *out_ptr, const char* buf,  int so
 
                 rv += set_header(msgBuf + rv, "content-type: %s\r\n", ft);
 
-                rv += set_header(msgBuf + rv, "content-length: %d\r\n", attrib_ptr->st_size);
+                int filesize = attrib_ptr->st_size;
+
+                rv += set_header(msgBuf + rv, "content-length: %d\r\n", filesize);
                 if(out_ptr->connection == 1)
                     rv += set_header(msgBuf + rv, "connection: Keep-Alive\r\n");
                 else
@@ -204,28 +213,23 @@ int checkAndResp(Request *request, http_out_t *out_ptr, const char* buf,  int so
                 struct tm *tm = localtime(& ( attrib_ptr->st_ctime) );
                 rv += strftime(msgBuf + rv, 80, "last-modified: %a, %d %b %Y %X\r\n", tm );
                 rv += sprintf(msgBuf + rv, "\r\n");
+                send_all(sockfd, msgBuf, rv);
+
                 if(strcmp(request->http_method, "GET")==0){
-                    FILE* fp = fopen(fullPath, "r");
-                    int nleft = attrib_ptr->st_size;
-                    if(fp == NULL)
-                        printf("error open file");
-                    while(nleft > 0){
-                        int crv = fread(msgBuf + rv, 1, nleft, fp);
-                        if(crv < 0){
-                            perror("error read file");
-                        }
-                        nleft -= crv;
-                        rv += crv;
-                    }
-                    fclose(fp);
-                    free(fullPath);
-                    rv += sprintf(msgBuf+rv, "\r\n");
+                    int srcfd = open(fullPath, O_RDONLY, 0);
+                    char* fileaddr = (char*)mmap(NULL,filesize, PROT_READ, MAP_PRIVATE, srcfd, 0); 
+                    close(srcfd);
+                    int n = send_all(sockfd, fileaddr, filesize);
+                    logging("filesize :%d, sent %d\n", filesize, n);
+                    rv += n;
+                    munmap(fileaddr, filesize );
+                    rv += send_all(sockfd,"\r\n",2);
+
                 }
             }
         }
     }
-    send_all(sockfd, msgBuf, sizeof msgBuf );
-    printf("sent %d\n", strlen(msgBuf));
+    printf("sent %d\n", rv);
     //printf("%s",msgBuf);
     return rv;
 }
@@ -249,15 +253,15 @@ char* getFileStat(const char *pathStr, struct stat ** attrib_ptr){
 }
 
 int setup_http_out( Request* request, http_out_t *out_ptr){
+
     Request_header *p = request->headers;
     for(int i = 0; i < request->header_count; i++){
         for(int j = 0; j < sizeof(handler_names)/ sizeof(handler_names[0]); j++){
-            if(strcasecmp(handler_names[i], p->header_name) == 0){
-                http_handlers[j](p->header_value, out_ptr);
+            if(strcasecmp(handler_names[j], p[i].header_name) == 0){
+                http_handlers[j](p[i].header_value, out_ptr);
                 break;
             }
         }
-        p++;
     }
     return 0;
 }
@@ -265,13 +269,14 @@ int setup_http_out( Request* request, http_out_t *out_ptr){
 int connection_handler( const char *info, http_out_t *out_ptr){
     if(strcasecmp(info , "keep-alive") == 0){
         out_ptr->connection = 1;
-    }
-    out_ptr->connection = 0;
+    }else
+        out_ptr->connection = 0;
     return 0;
 }
 
 int host_handler(const char *info, http_out_t *out_ptr){
     strcpy(out_ptr->host, info);
+    return 0;
 }
 
 
