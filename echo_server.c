@@ -232,13 +232,16 @@ int main(){
                         if(newfd > fdmax)
                             fdmax = newfd;
                         fprintf(stdout,"New connection from client: %s\n", inet_ntop(theiraddr.ss_family, get_in_addr((struct sockaddr*) &theiraddr), addrbuf, sin_size));
-                        /*
-                        if( send(newfd, "Hello, world!", 13,0) == -1){
-                            perror("Error sending");
-                            continue;
-                        }
-                        */
                     }else{
+                        http_out_t out;
+
+                        struct sockaddr_in theiraddr;
+                        uint32_t addLen = sizeof theiraddr;
+                        if(getpeername(i, (struct sockaddr*)&theiraddr, &addLen) == -1){
+                           perror("getpeername error");
+                        }
+                        logging("%s - - - - -\n", inet_ntop(AF_INET,& (theiraddr.sin_addr),out.ip, 128 ));
+
                         memset(recvbuf, 0, sizeof(recvbuf));
                         if( (rv = recv_http_header(i, recvbuf, BUF_LEN - 1)) <= 0){
                             if( rv == 0){
@@ -251,23 +254,7 @@ int main(){
                         }else{
                             Request *request = NULL;
                             request = parse(recvbuf, rv , i);
-                            checkAndResp(request,recvbuf, i);
-                            /*
-                            if(request != NULL){
-                                printf("sending the same back\n");
-                                if(send(i, recvbuf, rv,0) == -1){
-                                    perror("Error sending");
-                                }
-                            }else{
-                                printf("sending 400 back\n");
-                                char buf[BUF_LEN];
-                                int rv = pack_error_msg(buf, 400, "Bad Request");
-                                if( (rv = send_all(i, buf, rv)) == -1){
-                                    perror("Error sending");
-                                }
-                                printf("send %d btyes back\n",rv);
-                            }
-                            */
+                            checkAndResp(request, &out,recvbuf, i);
                         }
                     }
                 }

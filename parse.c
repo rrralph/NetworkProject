@@ -12,6 +12,24 @@
 
 extern FILE* logFp;
 
+int connection_handler(const char*, http_out_t *);
+int host_handler(const char*, http_out_t *);
+
+
+char* handler_names[] = {
+    "connection",
+    "host",
+};
+
+http_handler_t http_handlers [] = {
+    connection_handler,
+    host_handler,
+};
+
+
+
+
+
 mime_type_t FILE_TYPES [] = {
     {".html", "text/html"},
     {".css", "text/css"},
@@ -52,7 +70,6 @@ Request * parse(char *buffer, int size, int socketFd) {
 	char ch;
 	char buf[8192];
 	memset(buf, 0, 8192);
-
 
 	state = STATE_START;
 	while (state != STATE_CRLFCRLF) {
@@ -137,7 +154,8 @@ char *code_explanation(int code){
 }
 
 
-int checkAndResp(Request *request, const char* buf, int sockfd){
+int checkAndResp(Request *request, http_out_t *out_ptr, const char* buf,  int sockfd  ){
+
     for(int i = 0; i < BUF_LEN; i++) msgBuf[i] = '\0';
     int rv = 0;
     if(request == NULL){
@@ -156,6 +174,7 @@ int checkAndResp(Request *request, const char* buf, int sockfd){
             rv += sprintf(msgBuf + rv, "\r\n");
             rv += sprintf(msgBuf + rv, errMsgTmp, 501, "Unsupported method", request->http_method, 501, code_explanation(501));
         }else {
+
             struct stat attrib;
             struct stat * attrib_ptr = &attrib; 
             char *fullPath;
@@ -165,6 +184,9 @@ int checkAndResp(Request *request, const char* buf, int sockfd){
                 rv += sprintf(msgBuf + rv, "\r\n");
                 rv += sprintf(msgBuf + rv, errMsgTmp, 404, "Not found",request->http_version, 404, code_explanation(404));
             }else{
+
+                setup_http_out(request, out_ptr);
+
                 rv = set_header(msgBuf, "HTTP/1.1 %d %s\r\n", 200, "OK");
                 rv += set_header(msgBuf + rv, "server: Liso/1.0\r\n");
                 rv += set_header(msgBuf + rv, "date: %s\r\n",get_current_time());
@@ -174,7 +196,10 @@ int checkAndResp(Request *request, const char* buf, int sockfd){
                 rv += set_header(msgBuf + rv, "content-type: %s\r\n", ft);
 
                 rv += set_header(msgBuf + rv, "content-length: %d\r\n", attrib_ptr->st_size);
-                rv += set_header(msgBuf + rv, "connection: Keep-Alive\r\n");
+                if(out_ptr->connection == 1)
+                    rv += set_header(msgBuf + rv, "connection: Keep-Alive\r\n");
+                else
+                    rv += set_header(msgBuf + rv, "connection: Close\r\n");
 
                 struct tm *tm = localtime(& ( attrib_ptr->st_ctime) );
                 rv += strftime(msgBuf + rv, 80, "last-modified: %a, %d %b %Y %X\r\n", tm );
@@ -222,3 +247,33 @@ char* getFileStat(const char *pathStr, struct stat ** attrib_ptr){
     }
     return fullPath;
 }
+
+int setup_http_out( Request* request, http_out_t *out_ptr){
+    Request_header *p = request->headers;
+    for(int i = 0; i < request->header_count; i++){
+        for(int j = 0; j < sizeof(handler_names)/ sizeof(handler_names[0]); j++){
+            if(strcasecmp(handler_names[i], p->header_name) == 0){
+                http_handlers[j](p->header_value, out_ptr);
+                break;
+            }
+        }
+        p++;
+    }
+    return 0;
+}
+
+int connection_handler( const char *info, http_out_t *out_ptr){
+    if(strcasecmp(info , "keep-alive") == 0){
+        out_ptr->connection = 1;
+    }
+    out_ptr->connection = 0;
+    return 0;
+}
+
+int host_handler(const char *info, http_out_t *out_ptr){
+    strcpy(out_ptr->host, info);
+}
+
+
+
+
